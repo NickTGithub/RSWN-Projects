@@ -1,0 +1,169 @@
+#region VEXcode Generated Robot Configuration
+from vex import *
+import urandom
+
+# Brain should be defined by default
+brain=Brain()
+
+# Robot configuration code
+brain_inertial = Inertial()
+controller = Controller()
+up = Motor(Ports.PORT6, True)
+down = Motor(Ports.PORT7, False)
+right_ = Motor(Ports.PORT1, False)
+left_ = Motor(Ports.PORT12, True)
+
+
+
+# generating and setting random seed
+def initializeRandomSeed():
+    wait(100, MSEC)
+    xaxis = brain_inertial.acceleration(XAXIS) * 1000
+    yaxis = brain_inertial.acceleration(YAXIS) * 1000
+    zaxis = brain_inertial.acceleration(ZAXIS) * 1000
+    systemTime = brain.timer.system() * 100
+    urandom.seed(int(xaxis + yaxis + zaxis + systemTime)) 
+    
+# Initialize random seed 
+initializeRandomSeed()
+
+#endregion VEXcode Generated Robot Configuration
+
+#Fully created by @roboticsshenaniganswithnick: https://www.youtube.com/channel/UCMx7NQobb0uNsvFjilmX-6A
+#If you are using this for the VIQRC Competition, make sure to fully understand the code in accordance with rules G2 and G4
+#Notes:
+#-The code is driver-oriented, so all the movement is from the driver's point of view
+#-Check everything is plugged into the right ports
+#-Subscribe!!!!🙂
+
+Cpos=1
+Dpos=1
+veloU=0
+veloR=0
+veloL=0
+veloD=0
+true_angle=0
+stick_angle=0
+highvelo=100
+scale=1
+head=0
+turn_influence=0.1
+turn_influence2=0.6
+fast_slow=1
+
+def driver():
+    global stick_angle, true_angle, veloU, veloR, veloL, veloD, Dpos2, Dpos, Cpos, highvelo, scale, Bpos, head, turn_influence, fast_slow, turn_influence2
+    brain_inertial.calibrate()
+    brain_inertial.set_heading(0, DEGREES)
+    up.set_stopping(COAST)
+    up.set_max_torque(100, PERCENT)
+    right_.set_stopping(COAST)
+    right_.set_max_torque(100, PERCENT)
+    left_.set_stopping(COAST)
+    left_.set_max_torque(100, PERCENT)
+    down.set_stopping(COAST)
+    down.set_max_torque(100, PERCENT)
+    wait(2,SECONDS)
+    print("ready")
+    while True:
+        #resets which way is heading 0
+        if controller.buttonRUp.pressing():
+            brain_inertial.set_heading(0, DEGREES)
+        #setting some variables
+        Cpos=controller.axisC.position()
+        Dpos=controller.axisD.position()
+        Bpos=controller.axisB.position()
+        Apos=controller.axisA.position()
+        head=brain_inertial.heading()
+        #determines whether to be in fast/normal/slow mode
+        if Apos==0:
+            fast_slow=1
+        elif Apos>20:
+            fast_slow=1.7
+        elif Apos<20:
+            fast_slow=0.5
+        #check if joystick is being in the center line
+        if Cpos==0: 
+            if Dpos==0:
+                #right joystick is in the center, no moving only turning
+                veloU=0+Bpos*fast_slow*turn_influence2
+                veloR=0-Bpos*fast_slow*turn_influence2
+                veloL=0+Bpos*fast_slow*turn_influence2
+                veloD=0-Bpos*fast_slow*turn_influence2
+            #moving straight forward
+            elif Cpos==0 and Dpos>0:
+                true_angle=0-head
+                find_velo()
+            #moving straight backward
+            elif Cpos==0 and Dpos<0:
+                true_angle=180-head
+                find_velo()
+        #joystick is being angled
+        else:
+            #joystick is angled forwards
+            if Dpos>0:
+                Dpos2=1
+                stick_angle=math.atan(Cpos/Dpos)/180*math.pi
+                true_angle=stick_angle-head
+                find_velo()
+            #joystick is angled backwards
+            elif Dpos<0:
+                Dpos2=-1
+                stick_angle=math.degreesmath.atan(Cpos/Dpos)/180*math.pi
+                true_angle=stick_angle-head
+                find_velo()
+            #joystick is angled straight right
+            elif Dpos==0 and Cpos>0:
+                true_angle=90-head
+                find_velo()
+            #joystick is angled straight left
+            elif Dpos==0 and Cpos<0:
+                true_angle=-90-head
+                find_velo()
+        #scales down the speed while maintaining the proportion (speed can't exceed 100%)
+        up.set_velocity(veloU*scale)
+        right_.set_velocity(veloR*scale)
+        left_.set_velocity(veloL*scale)
+        down.set_velocity(veloD*scale)
+        up.spin(FORWARD)
+        right_.spin(FORWARD)
+        left_.spin(FORWARD)
+        down.spin(FORWARD)
+        wait(10, MSEC)
+            
+def find_velo():
+    global stick_angle, true_angle, veloU, veloR, veloL, veloD, Dpos2, Dpos, Cpos, highvelo, scale, Bpos, head, turn_influence, fast_slow
+    #use trig to find velocity, then add/subtract velocity to account for turning(if the driver wants to turn and move)
+    #turn_influence=0.1, turn_influence2=0.6 
+    veloU=((math.sin(true_angle/180*math.pi))*100*Dpos2)+Bpos*turn_influence*fast_slow
+    veloR=((math.cos(true_angle/180*math.pi))*100*Dpos2)-Bpos*turn_influence*fast_slow
+    veloL=((math.cos(true_angle/180*math.pi))*100*Dpos2)+Bpos*turn_influence*fast_slow
+    veloD=((math.sin(true_angle/180*math.pi))*100*Dpos2)-Bpos*turn_influence*fast_slow
+    find_max_velo()
+    #find the scale factor
+    if highvelo<100:
+        scale=1
+    else:
+        scale=abs(100/highvelo)
+
+#finds out which wheel should be spinning the fastest
+def find_max_velo():
+    global veloU, veloR, veloL, veloD, highvelo
+    if (veloU>100 and veloU>veloR and veloU>veloL and veloU>veloD):
+            highvelo = veloU
+    if (veloR>100 and veloR>veloU and veloR>veloL and veloR>veloD):
+            highvelo = veloR
+    if (veloL>100 and veloL>veloR and veloL>veloU and veloL>veloD):
+            highvelo = veloL
+    if (veloD>100 and veloD>veloR and veloD>veloL and veloD>veloU):
+            highvelo = veloD
+    if (veloU<-100 and veloU<veloR and veloU<veloL and veloU<veloD):
+            highvelo = veloU
+    if (veloR<-100 and veloR<veloU and veloR<veloL and veloR<veloD):
+            highvelo = veloR
+    if (veloL<-100 and veloL<veloR and veloL<veloU and veloL<veloD):
+            highvelo = veloL
+    if (veloD<-100 and veloD<veloR and veloD<veloL and veloD<veloU):
+            highvelo = veloD
+            
+driver()
