@@ -1,0 +1,169 @@
+#region VEXcode Generated Robot Configuration
+from vex import *
+import urandom
+
+# Brain should be defined by default
+brain=Brain()
+
+# Robot configuration code
+brain_inertial = Inertial()
+controller = Controller()
+Pivot = Motor(Ports.PORT7, False)
+Right = Motor(Ports.PORT3, True)
+Left = Motor(Ports.PORT4, False)
+pod = Gyro(Ports.PORT5)
+
+
+
+# generating and setting random seed
+def initializeRandomSeed():
+    wait(100, MSEC)
+    xaxis = brain_inertial.acceleration(XAXIS) * 1000
+    yaxis = brain_inertial.acceleration(YAXIS) * 1000
+    zaxis = brain_inertial.acceleration(ZAXIS) * 1000
+    systemTime = brain.timer.system() * 100
+    urandom.seed(int(xaxis + yaxis + zaxis + systemTime)) 
+    
+# Initialize random seed 
+initializeRandomSeed()
+
+#endregion VEXcode Generated Robot Configuration
+
+#Fully created by @roboticsshenaniganswithnick: https://www.youtube.com/channel/UCMx7NQobb0uNsvFjilmX-6A
+#Watch the building video here: https://www.youtube.com/watch?v=Bd_94XBPMq4
+#Watch the explanation video here: https://www.youtube.com/watch?v=UZBabSDlUjw
+#If you are using this for the VIQRC Competition, make sure to fully understand the code in accordance with rules G2 and G4
+#Notes:
+#-Make sure to initialize the robot with the gyro sensor port directly facing the brain, otherwise the code won't work
+#-The code is driver-oriented, so all the movement is from the driver's point of view
+#-Check everything is plugged into the right ports
+#-Subscribe!!!!🙂
+
+set_angle=0
+velo=0
+real_angle=0
+current_angle=0
+path1=0
+path2=0
+pivot_set_velo=0
+short=0
+
+def main():
+    global apos, bpos, cpos, dpos
+    brain_inertial.calibrate()
+    brain_inertial.set_heading(0, DEGREES)
+    pod.calibrate(GyroCalibrationType.NORMAL)
+    pod.set_heading(0, DEGREES)
+    Left.set_stopping(BRAKE)
+    Left.set_max_torque(100, PERCENT)
+    Right.set_stopping(BRAKE)
+    Right.set_max_torque(100, PERCENT)
+    Pivot.set_stopping(HOLD)
+    Pivot.set_max_torque(100, PERCENT)
+    wait(2,SECONDS)
+    brain.screen.print("ready")
+    while True:
+        apos=controller.axisA.position()
+        bpos=controller.axisB.position()
+        cpos=controller.axisC.position()
+        dpos=controller.axisD.position()
+        #check if robot is being told to pivot turn or not
+        #checks if the left joystick is being moved or not, there is a range because the controller sometimes reports imperfect values
+        if bpos>-10 and bpos<10: 
+        #if the joystick is not being moved too much (not outside the range), the robot knows the driver wants it to move
+            find_angle()
+            pivot_velo()
+            find_velo()
+            Left.spin(FORWARD)
+            Right.spin(FORWARD)
+            Pivot.spin(FORWARD)
+        else:
+        #if the joystick is being moved, the robot knows it has to turn
+            turning()
+        #debug function prints out variables to make debugging easier, turn off debug mode by commenting it out by putting a "#" at the front
+        #debug mode prints in the print console, you will need to connect the brain/controller to your computer
+        debug()
+        wait(5, MSEC)
+
+def debug():
+    global current_angle, set_angle, real_angle, path1, path2, cpos, dpos, bpos, error, velo, pivot_set_velo, short, apos
+    print("--------------------")
+    print("current_angle", current_angle)
+    print("set_angle", set_angle)
+    print("real_angle", real_angle)
+    print("path1", path1, "path2", path2)
+    print("cpos", cpos)
+    print("dpos", dpos)
+    print("bpos", bpos)
+    print("apos", apos)
+    print("brain_heading", brain_inertial.heading())
+    print("pod_heading", pod.heading())
+    print("error", error)
+    print("error2", error2)
+    print("LR_set_velo", velo)
+    print("Pivot_set_velo", pivot_set_velo)
+    print("Pivot_velo", Pivot.velocity(PERCENT))
+    print("Left_velo", Left.velocity(PERCENT))
+    print("Right_velo", Right.velocity(PERCENT))
+    print("short", short)
+
+def find_angle():
+    global set_angle, cpos, dpos, current_angle
+    #change the gyro sensor to be un-reversed
+    current_angle=abs(pod.heading()-360)
+    #check if joystick is in the center, forward, or reverse
+    if dpos==0 and cpos>-25 and cpos<25:
+        Pivot.set_velocity(0,PERCENT)
+        set_angle=current_angle
+    #uses arc tangent to find degree joystick is being angled at
+    elif dpos>=0:
+        #convert to 0 degree - 360 degree system, easier to work with for the rest of the code
+        if cpos<0:
+            set_angle=math.degrees(math.atan2(cpos, dpos))+360
+        else:
+            set_angle=math.degrees(math.atan2(cpos, dpos))
+    elif dpos<0:
+        set_angle=math.degrees(math.atan2(cpos, dpos))+180
+
+def pivot_velo():
+    global real_angle, current_angle, pivot_set_velo, error, error2, kp, set_angle
+    #tune kp to make your swerve pivot faster/be more accurate (there's a tradeoff)
+    kp=3
+    #find degrees left to turn, as degrees left to turn decreases, error decreases, and velocity decreases
+    error=set_angle-current_angle
+    #makes sure error is no greater than +-180 degrees
+    #ex: if error is 185 deg it makes more sense to tell the robot the error is 175 deg in the other direction so it spins there faster
+    if error>180:
+        error2=error-360
+    elif error<-180:
+        error2=error+360
+    else:
+        error2=error
+    #multiply error2 by kp for tuning
+    pivot_set_velo=error2*kp
+    Pivot.set_velocity(pivot_set_velo, PERCENT)
+
+def find_velo():
+    global cpos, dpos, velo
+    #pythagorean theorem/distance formula to find the distance the joystick is from its rest position
+    velo=math.sqrt((cpos*cpos)+(dpos*dpos))
+    #tells the wheels whether to spin forward or backward
+    if dpos>0 or (dpos==0 and cpos>0):
+        Left.set_velocity(velo,PERCENT)
+        Right.set_velocity(velo,PERCENT)
+    else:
+        Left.set_velocity(-velo,PERCENT)
+        Right.set_velocity(-velo,PERCENT)
+
+def turning():
+    global bpos, apos
+    #tank drive control logic
+    Left.set_velocity(apos+bpos,PERCENT)
+    Right.set_velocity(apos-bpos,PERCENT)
+    #make sure the pivot motor is stopped and hoolding its position
+    Pivot.stop()
+    Left.spin(FORWARD)
+    Right.spin(FORWARD)
+
+#run the "main" function which triggers everything else
+main()
