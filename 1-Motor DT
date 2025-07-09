@@ -1,0 +1,90 @@
+#region VEXcode Generated Robot Configuration
+from vex import *
+import urandom
+
+# Brain should be defined by default
+brain=Brain()
+
+# Robot configuration code
+brain_inertial = Inertial()
+controller = Controller()
+DT = Motor(Ports.PORT2, False)
+switcher = Pneumatic(Ports.PORT1)
+
+
+
+# generating and setting random seed
+def initializeRandomSeed():
+    wait(100, MSEC)
+    xaxis = brain_inertial.acceleration(XAXIS) * 1000
+    yaxis = brain_inertial.acceleration(YAXIS) * 1000
+    zaxis = brain_inertial.acceleration(ZAXIS) * 1000
+    systemTime = brain.timer.system() * 100
+    urandom.seed(int(xaxis + yaxis + zaxis + systemTime)) 
+    
+# Initialize random seed 
+initializeRandomSeed()
+
+#endregion VEXcode Generated Robot Configuration
+
+# ------------------------------------------
+# 
+# 	Project:      VEXcode Project
+# 	Author:       VEX
+# 	Created:
+# 	Description:  VEXcode IQ Python Project
+# 
+# ------------------------------------------
+
+# Library imports
+from vex import *
+
+# Begin project code
+
+def driver():
+    global cpos, dpos
+    DT.set_stopping(BRAKE)
+    DT.set_max_torque(50, PERCENT)
+    switcher.retract(CYLINDER2)
+    switcher.pump_on()
+    while True:
+        cpos=controller.axisC.position()
+        dpos=controller.axisD.position()
+        if -45<cpos<45 and 25<dpos:
+            #forwards
+            switcher.retract(CYLINDER2)
+            find_velo()
+            DT.spin(FORWARD)
+        elif -45<cpos<45 and 25>dpos:
+            #backwards
+            switcher.retract(CYLINDER2)
+            find_velo()
+            DT.spin(REVERSE)
+        elif -45<dpos<45 and 25<cpos:
+            #pivot left
+            switcher.extend(CYLINDER2)
+            find_velo()
+            DT.spin(FORWARD)
+        elif -45<dpos<45 and 25>cpos:
+            #pivot right
+            switcher.extend(CYLINDER2)
+            find_velo()
+            DT.spin(REVERSE)
+        print(DT.velocity(PERCENT))
+
+def find_velo():
+    global cpos, dpos
+    velo=math.sqrt((cpos*cpos)+(dpos*dpos))
+    DT.set_velocity(velo*2, PERCENT)
+
+def testing():
+    wait(1,SECONDS)
+    DT.set_max_torque(100,PERCENT)
+    DT.set_velocity(100,PERCENT)
+    while True:
+        switcher.retract(CYLINDER2)
+        DT.spin(FORWARD)
+        print(DT.velocity(PERCENT))
+        wait(5,MSEC)
+#driver()
+testing()
