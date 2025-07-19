@@ -1,0 +1,121 @@
+#region VEXcode Generated Robot Configuration
+from vex import *
+import urandom
+
+# Brain should be defined by default
+brain=Brain()
+
+# Robot configuration code
+brain_inertial = Inertial()
+controller = Controller()
+uno = Pneumatic(Ports.PORT7)
+dos = Pneumatic(Ports.PORT8)
+
+
+
+# generating and setting random seed
+def initializeRandomSeed():
+    wait(100, MSEC)
+    xaxis = brain_inertial.acceleration(XAXIS) * 1000
+    yaxis = brain_inertial.acceleration(YAXIS) * 1000
+    zaxis = brain_inertial.acceleration(ZAXIS) * 1000
+    systemTime = brain.timer.system() * 100
+    urandom.seed(int(xaxis + yaxis + zaxis + systemTime)) 
+    
+# Initialize random seed 
+initializeRandomSeed()
+
+#endregion VEXcode Generated Robot Configuration
+
+# ------------------------------------------
+# 
+# 	Project:      VEXcode Project
+# 	Author:       VEX
+# 	Created:
+# 	Description:  VEXcode IQ Python Project
+# 
+# ------------------------------------------
+
+# Library imports
+from vex import *
+
+# Begin project code
+
+#Fully created by @roboticsshenaniganswithnick: https://www.youtube.com/channel/UCMx7NQobb0uNsvFjilmX-6A
+#If you are using this for the VIQRC Competition, make sure to fully understand the code in accordance with rules G2 and G4
+#Notes:
+#-Check everything is plugged into the right ports
+#-Subscribe!!!!🙂
+
+interval = 0.27
+def start():
+    uno.pump_on()
+    wait(10, SECONDS)
+    brain.screen.print('ready')
+
+def run():
+        print('for')
+        dos.extend(CYLINDER1)
+        wait(interval,SECONDS)
+        dos.retract(CYLINDER2)
+        wait(interval,SECONDS)
+        uno.extend(CYLINDER2)
+        wait(interval,SECONDS)
+        dos.retract(CYLINDER1)
+        wait(interval,SECONDS)
+        dos.extend(CYLINDER2)
+        wait(interval,SECONDS)
+        uno.retract(CYLINDER2)
+        wait(interval,SECONDS)
+
+def run_backwards():
+        print('for')
+        dos.extend(CYLINDER2)
+        wait(interval,SECONDS)
+        dos.retract(CYLINDER1)
+        wait(interval,SECONDS)
+        uno.extend(CYLINDER2)
+        wait(interval,SECONDS)
+        dos.retract(CYLINDER2)
+        wait(interval,SECONDS)
+        dos.extend(CYLINDER1)
+        wait(interval,SECONDS)
+        uno.retract(CYLINDER2)
+        wait(interval,SECONDS)
+
+
+def driver():
+    global cpos, dpos
+    while True:
+        cpos=controller.axisC.position()
+        dpos=controller.axisD.position()
+        if -45<cpos<45 and 25<dpos:
+            #forwards
+            #print('forward')
+            uno.extend(CYLINDER1)
+            run()
+        elif -45<cpos<45 and -25>dpos:
+            #backwards
+            #print('backward')
+            uno.extend(CYLINDER1)
+            run_backwards()
+        elif -45<dpos<45 and 25<cpos:
+            #pivot left
+            #print('left')
+            uno.retract(CYLINDER1)
+            run()
+        elif -45<dpos<45 and -25>cpos:
+            #pivot right
+            #print('right')
+            uno.retract(CYLINDER1)
+            run_backwards()
+        else: 
+            engine=0
+        #print(cpos, 'cpos')
+        #print(dpos, 'dpos')
+        print(engine)
+
+start()
+driver()
+
+    
