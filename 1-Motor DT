@@ -41,6 +41,12 @@ from vex import *
 
 # Begin project code
 
+#Fully created by @roboticsshenaniganswithnick: https://www.youtube.com/channel/UCMx7NQobb0uNsvFjilmX-6A
+#If you are using this for the VIQRC Competition, make sure to fully understand the code in accordance with rules G2 and G4
+#Notes:
+#-Check everything is plugged into the right ports
+#-Subscribe!!!!🙂
+
 def driver():
     global cpos, dpos
     DT.set_stopping(BRAKE)
