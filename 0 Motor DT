@@ -90,29 +90,19 @@ def driver():
         cpos=controller.axisC.position()
         dpos=controller.axisD.position()
         if -45<cpos<45 and 25<dpos:
-            #forwards
-            #print('forward')
             uno.extend(CYLINDER1)
             run()
         elif -45<cpos<45 and -25>dpos:
-            #backwards
-            #print('backward')
             uno.extend(CYLINDER1)
             run_backwards()
         elif -45<dpos<45 and 25<cpos:
-            #pivot left
-            #print('left')
             uno.retract(CYLINDER1)
             run()
         elif -45<dpos<45 and -25>cpos:
-            #pivot right
-            #print('right')
             uno.retract(CYLINDER1)
             run_backwards()
         else: 
             engine=0
-        #print(cpos, 'cpos')
-        #print(dpos, 'dpos')
         print(engine)
 
 start()
